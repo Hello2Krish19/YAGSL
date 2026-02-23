@@ -1,5 +1,7 @@
 package swervelib;
 
+import static edu.wpi.first.units.Units.Radians;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 
 import edu.wpi.first.math.MathUtil;
@@ -15,6 +17,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -935,6 +938,45 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
   }
 
   /**
+   * Get the target vector with a lookahead, if defined. Useful for shooting on the move implementations.
+   *
+   * @param target Target pose to
+   * @return {@link Translation2d} of the target vector.
+   */
+  public Translation2d getTargetVector(Pose2d target)
+  {
+    var currentPose                = swerveDrive.getPose();
+    var currentFieldOrientedSpeeds = swerveDrive.getFieldVelocity();
+    if (aimLookaheadTime.isPresent())
+    {
+      currentPose = currentPose.exp(currentFieldOrientedSpeeds.toTwist2d(aimLookaheadTime.get().in(Seconds)));
+    }
+
+    return target.getTranslation().minus(currentPose.getTranslation());
+  }
+
+  /**
+   * Calculate the angular velocity required for the given target with the current heading, `controllerproperties.json`
+   * PID, and feedforward (if defined).
+   *
+   * @param target Target angle to calculate for.
+   * @return {@link AngularVelocity} to reach the target {@link Angle}.
+   */
+  public AngularVelocity calculateAngularVelocity(Angle target)
+  {
+    var omegaRadiansPerSecond = swerveController.headingCalculate(swerveDrive.getOdometryHeading().getRadians(),
+                                                                  target.in(Radians));
+    if (azimuthFeedforward.isPresent())
+    {
+      omegaRadiansPerSecond += azimuthFeedforward.get()
+                                                 .calculateWithVelocities(swerveDrive.getFieldVelocity().omegaRadiansPerSecond,
+                                                                          omegaRadiansPerSecond);
+    }
+    return RadiansPerSecond.of(omegaRadiansPerSecond);
+  }
+
+
+  /**
    * Gets a {@link ChassisSpeeds}
    *
    * @return {@link ChassisSpeeds}
@@ -1002,13 +1044,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
       }
       case AIM ->
       {
-        var currentPose   = swerveDrive.getPose();
-        var currentSpeeds = swerveDrive.getFieldVelocity();
-        if (aimLookaheadTime.isPresent())
-        {
-          currentPose = currentPose.exp(currentSpeeds.toTwist2d(aimLookaheadTime.get().in(Seconds)));
-        }
-        var targetVector   = aimTarget.orElseThrow().getTranslation().minus(currentPose.getTranslation());
+        var targetVector = getTargetVector(aimTarget.orElseThrow());
         var targetDistance = targetVector.getNorm();
         // TODO: Shoot on the move, using
         //  targetVector = targetVector.div(targetDistance).times(sotmDistanceToRPSMap.get(targetDistance)*flyWheelCircumference)
@@ -1016,14 +1052,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
         var        shotVector = targetVector;
         Rotation2d target     = shotVector.getAngle();
         aimGoalAngle = Optional.of(target.getMeasure());
-        omegaRadiansPerSecond = swerveController.headingCalculate(swerveDrive.getOdometryHeading().getRadians(),
-                                                                  target.getRadians());
-        if (azimuthFeedforward.isPresent())
-        {
-          omegaRadiansPerSecond += azimuthFeedforward.get()
-                                                     .calculateWithVelocities(swerveDrive.getFieldVelocity().omegaRadiansPerSecond,
-                                                                              omegaRadiansPerSecond);
-        }
+        omegaRadiansPerSecond = calculateAngularVelocity(target.getMeasure()).in(RadiansPerSecond);
         speeds = new ChassisSpeeds(vxMetersPerSecond, vyMetersPerSecond, omegaRadiansPerSecond);
         break;
       }
