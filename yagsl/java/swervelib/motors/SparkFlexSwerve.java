@@ -80,6 +80,7 @@ public class SparkFlexSwerve extends SwerveMotor
    */
   public SparkFlexSwerve(SparkFlex motor, boolean isDriveMotor, DCMotor motorType)
   {
+    this.simMotor = motorType;
     this.motor = motor;
     this.isDriveMotor = isDriveMotor;
     failureConfiguring = new Alert("Motors",
