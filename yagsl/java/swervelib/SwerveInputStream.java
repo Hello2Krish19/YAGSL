@@ -255,7 +255,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
     this.driveToPose = s.driveToPose;
     this.driveToPoseTranslationPIDController = s.driveToPoseTranslationPIDController;
     this.driveToPoseOmegaPIDController = s.driveToPoseOmegaPIDController;
-    this.aimTarget = s.aimTarget;
+    this. = s.aimTarget;
     this.headingEnabled = s.headingEnabled;
     this.aimEnabled = s.aimEnabled;
     this.driveToPoseEnabled = s.driveToPoseEnabled;
@@ -574,6 +574,13 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
     return this;
   }
 
+  
+   /**
+   * Aim the {@link SwerveDrive} at this pose while driving.
+   *
+   * @param aimTarget {@link Supplier<Pose2d>} to point at.
+   * @return this
+   */
   public SwerveInputStream aim(Supplier<Pose2d> aimTarget)
   {
     this.aimTarget = aimTarget.get().equals(Pose2d.kZero) ? Optional.empty() : Optional.of(aimTarget);
