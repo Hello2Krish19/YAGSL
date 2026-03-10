@@ -96,7 +96,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
   /**
    * Target to aim at.
    */
-  private       Optional<Pose2d>                 aimTarget                           = Optional.empty();
+  private       Optional<Supplier<Pose2d>>                 aimTarget                           = Optional.empty();
   /**
    * Target {@link Supplier<Pose2d>} to drive towards when driveToPose is enabled.
    */
@@ -568,9 +568,15 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
    * @param aimTarget {@link Pose2d} to point at.
    * @return this
    */
-  public SwerveInputStream aim(Pose2d aimTarget)
+  public SwerveInputStream aim(Pose2d aimPose)
   {
-    this.aimTarget = aimTarget.equals(Pose2d.kZero) ? Optional.empty() : Optional.of(aimTarget);
+    aim(() -> (aimPose));
+    return this;
+  }
+
+  public SwerveInputStream aim(Supplier<Pose2d> aimTarget)
+  {
+    this.aimTarget = aimTarget.get().equals(Pose2d.kZero) ? Optional.empty() : Optional.of(aimTarget);
     return this;
   }
 
@@ -1120,7 +1126,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
       }
       case AIM ->
       {
-        var targetVector = getTargetVector(aimTarget.orElseThrow());
+        var targetVector = getTargetVector(aimTarget.orElseThrow().get());
         var targetDistance = targetVector.getNorm();
         // TODO: Shoot on the move, using
         //  targetVector = targetVector.div(targetDistance).times(sotmDistanceToRPSMap.get(targetDistance)*flyWheelCircumference)
