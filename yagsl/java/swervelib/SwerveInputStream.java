@@ -766,7 +766,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
       return SwerveInputMode.TRANSLATION_ONLY;
     } else if (aimEnabled.isPresent() && aimEnabled.get().getAsBoolean())
     {
-      if (aimTarget.isPresent())
+      if (.isPresent())
       {
         return SwerveInputMode.AIM;
       } else
@@ -1132,7 +1132,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
       }
       case AIM ->
       {
-        var targetVector = getTargetVector(aimTarget.get().orElseThrow());
+        var targetVector = getTargetVector(aimTarget.orElseThrow().get());
         var targetDistance = targetVector.getNorm();
         // TODO: Shoot on the move, using
         //  targetVector = targetVector.div(targetDistance).times(sotmDistanceToRPSMap.get(targetDistance)*flyWheelCircumference)
