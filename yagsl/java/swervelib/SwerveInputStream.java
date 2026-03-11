@@ -766,7 +766,7 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
       return SwerveInputMode.TRANSLATION_ONLY;
     } else if (aimEnabled.isPresent() && aimEnabled.get().getAsBoolean())
     {
-      if (.isPresent())
+      if (aimTarget.isPresent())
       {
         return SwerveInputMode.AIM;
       } else
