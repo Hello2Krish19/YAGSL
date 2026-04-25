@@ -1,10 +1,13 @@
 package swervelib.parser.deserializer.reflections;
 
 import com.ctre.phoenix6.CANBus;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.CANcoderConfigurator;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
@@ -92,13 +95,20 @@ public class CTREDevices
   /**
    * Get the {@link com.ctre.phoenix6.hardware.CANcoder} angle.
    *
-   * @param canid  CAN ID of the encoder.
-   * @param canbus CAN bus name of the encoder.
+   * @param canid    CAN ID of the encoder.
+   * @param canbus   CAN bus name of the encoder.
+   * @param inverted Inverted encoder readings.
    * @return {@link Supplier} of {@link Angle} and {@link com.ctre.phoenix6.hardware.CANcoder}
    */
-  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus)
+  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
   {
-    var encoder = new CANcoder(canid, new CANBus(canbus));
+    var                   encoder      = new CANcoder(canid, new CANBus(canbus));
+    CANcoderConfiguration cfg          = new CANcoderConfiguration();
+    CANcoderConfigurator  configurator = encoder.getConfigurator();
+    configurator.refresh(cfg);
+    cfg.MagnetSensor.withSensorDirection(
+        inverted ? SensorDirectionValue.Clockwise_Positive : SensorDirectionValue.CounterClockwise_Positive);
+    configurator.apply(cfg);
     return Pair.of(() -> encoder.getPosition().getValue(), encoder);
   }
 }

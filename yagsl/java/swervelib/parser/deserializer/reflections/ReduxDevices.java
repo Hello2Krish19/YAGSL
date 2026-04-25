@@ -40,13 +40,15 @@ public class ReduxDevices
   /**
    * Get the {@link com.reduxrobotics.sensors.canandmag.Canandmag} angle.
    *
-   * @param canid  CAN ID of the encoder.
-   * @param canbus CAN bus name of the encoder.
+   * @param canid    CAN ID of the encoder.
+   * @param canbus   CAN bus name of the encoder.
+   * @param inverted Inverted encoder readings.
    * @return {@link Supplier} of {@link Angle} and {@link com.reduxrobotics.sensors.canandmag.Canandmag}
    */
-  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus)
+  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
   {
     var encoder = new Canandmag(canid, canbus);
+    encoder.setSettings(encoder.getSettings().setInvertDirection(inverted));
     return Pair.of(() -> Rotations.of(encoder.getAbsPosition()), encoder);
   }
 }
