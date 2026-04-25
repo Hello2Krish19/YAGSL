@@ -105,6 +105,73 @@ public class DeviceJson
   {CTRE, REV, THRIFTYBOT, ANDYMARK, REDUX, STUDICA, SMARTIO, LIMELIGHT, UNKNOWN}
 
   /**
+   * Get the vendor of the device.
+   *
+   * @return Vendor of the device.
+   */
+  public VENDOR getVendor(VENDOR attachedType)
+  {
+    if (type.contains("_"))
+    {
+      String[] vendorData           = type.split("_");
+      String   vendorType           = vendorData[0];
+      String   vendorConnectionType = vendorData[1];
+      switch (vendorType)
+      {
+        case "systemcore":
+          return VENDOR.LIMELIGHT;
+        case "navx3":
+          return VENDOR.STUDICA;
+        case "talonfx":
+        case "talonfxs":
+        case "cancoder":
+        case "pigeon2":
+          return VENDOR.CTRE;
+        case "sparkmax":
+        case "sparkflex":
+          return VENDOR.REV;
+        case "revthroughbore":
+          switch (vendorConnectionType)
+          {
+            case "attached": return attachedType;
+            case "dio": return VENDOR.SMARTIO;
+          }
+        case "nova":
+          return VENDOR.THRIFTYBOT;
+        case "andymarkhexbore":
+          switch (vendorConnectionType)
+          {
+            case "attached": return attachedType;
+            case "dio":
+            case "analog": return VENDOR.SMARTIO;
+            case "can": return VENDOR.ANDYMARK;
+          }
+        case "canandgyro": return VENDOR.REDUX;
+        case "canandmag":
+          switch (vendorConnectionType)
+          {
+            case "attached": return attachedType;
+            case "dio": return VENDOR.SMARTIO;
+            case "can": return VENDOR.REDUX;
+          }
+        case "srxmag":
+          switch (vendorConnectionType)
+          {
+            case "attached": return attachedType;
+            case "analog": return VENDOR.SMARTIO;
+          }
+        case "thrifty":
+          switch (vendorConnectionType)
+          {
+            case "attached": return attachedType;
+            case "analog": return VENDOR.SMARTIO;
+          }
+      }
+    }
+    return VENDOR.UNKNOWN;
+  }
+
+  /**
    * Get the Absolute Encoder Supplier and Vendor Absolute Encoder Object.
    *
    * @return Pair of {@link Supplier} and Vendor Absolute Encoder {@link Object}
