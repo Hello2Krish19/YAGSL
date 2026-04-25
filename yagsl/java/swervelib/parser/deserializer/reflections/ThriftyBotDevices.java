@@ -66,7 +66,7 @@ public class ThriftyBotDevices
   public enum AbsoluteEncoderType
   {
     /**
-     * DutyCycle encoder.
+     * Redux Canandmag encoder.
      */
     CANANDMAG(ExternalEncoder.REDUX_ENCODER),
     /**
@@ -80,7 +80,11 @@ public class ThriftyBotDevices
     /**
      * SRX Mag encoder.
      */
-    SRXMAG(ExternalEncoder.SRX_MAG_ENCODER);
+    SRXMAG(ExternalEncoder.SRX_MAG_ENCODER),
+    /**
+     * DutyCycle encoder.
+     */
+    DUTYCYCLE(ExternalEncoder.REV_ENCODER);
 
     /**
      * Absolute encoder type.
