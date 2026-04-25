@@ -79,10 +79,25 @@ public class ReflectionsManager
    */
   public enum MotorControllers
   {
+    /**
+     * TalonFX Motor Controller wihtin KrakenX60 and KrakenX44
+     */
     TALONFX("CTREDevices"),
+    /**
+     * TalonFXS Motor Controller
+     */
     TALONFXS("CTREDevices"),
+    /**
+     * SparkMax Motor Controller
+     */
     SPARKMAX("REVDevices"),
+    /**
+     * SparkFlex Motor Controller
+     */
     SPARKFLEX("REVDevices"),
+    /**
+     * ThriftyBot Nova Motor Controller
+     */
     NOVA("ThriftyBotDevices");
 
     /**
@@ -118,7 +133,6 @@ public class ReflectionsManager
     {
       try
       {
-
         Class<?> wrapper = Class.forName(className);
         return (SmartMotorController) wrapper.getMethod("getMotorController",
                                                         int.class,
