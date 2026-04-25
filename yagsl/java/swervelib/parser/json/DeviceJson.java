@@ -88,11 +88,11 @@ public class DeviceJson
           switch (vendorType)
           {
             case "navx3":
-              return Gyro.NAVX3.getAbsoluteEncoder(id, canbus, axis, inverted);
+              return Gyro.NAVX3.getGyro(id, canbus, axis, inverted);
             case "pigeon2":
-              return Gyro.PIGEON2.getAbsoluteEncoder(id, canbus, axis, inverted);
+              return Gyro.PIGEON2.getGyro(id, canbus, axis, inverted);
             case "canandgyro":
-              return Gyro.CANANDGYRO.getAbsoluteEncoder(id, canbus, axis, inverted);
+              return Gyro.CANANDGYRO.getGyro(id, canbus, axis, inverted);
           }
         case "internal":
           throw new IllegalArgumentException("Internal gyro not supported yet!");

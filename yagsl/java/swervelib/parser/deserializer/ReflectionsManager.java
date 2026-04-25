@@ -276,7 +276,7 @@ public class ReflectionsManager
      * @param canbus CAN bus name of the encoder.
      * @return {@link Supplier} of {@link Angle}
      */
-    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, GyroAxis axis, boolean inverted)
+    public Pair<Supplier<Angle>, Object> getGyro(int canid, String canbus, GyroAxis axis, boolean inverted)
     {
       try
       {

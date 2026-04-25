@@ -6,10 +6,10 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.hardware.TalonFXS;
 import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
 import java.util.function.Supplier;
+import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.remote.TalonFXSWrapper;
@@ -71,14 +71,22 @@ public class CTREDevices
   /**
    * Get the gyroscope angle supplier and gyroscope object.
    *
-   * @param canid  CAN ID of the gyroscope.
-   * @param canbus CAN bus name of the gyroscope.
+   * @param canid    CAN ID of the gyroscope.
+   * @param canbus   CAN bus name of the gyroscope.
+   * @param axis     Gyro axis.
+   * @param inverted Inverted gyro readings.
    * @return {@link Pair} of {@link Supplier} and {@link Object}
    */
-  public static Pair<Supplier<Rotation3d>, Object> getGyroAngle(int canid, String canbus)
+  public static Pair<Supplier<Angle>, Object> getGyroAngle(int canid, String canbus, GyroAxis axis, boolean inverted)
   {
     var gyro = new Pigeon2(canid, new CANBus(canbus));
-    return Pair.of(gyro::getRotation3d, gyro);
+    switch (axis)
+    {
+      case YAW: return Pair.of(gyro.getYaw().asSupplier(), gyro);
+      case PITCH: return Pair.of(gyro.getPitch().asSupplier(), gyro);
+      case ROLL: return Pair.of(gyro.getRoll().asSupplier(), gyro);
+      default: throw new IllegalArgumentException("Invalid gyro axis: " + axis);
+    }
   }
 
   /**
