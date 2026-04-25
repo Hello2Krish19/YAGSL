@@ -294,12 +294,6 @@ public class DeviceJson
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
     }
-    switch (vendorType)
-    {
-      case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus);
-
-      default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
-    }
   }
 
   /**
