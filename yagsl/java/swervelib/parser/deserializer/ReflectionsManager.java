@@ -137,18 +137,23 @@ public class ReflectionsManager
      *
      * @param externalEncoderType External encoder type attached to the motor controller.
      * @param motorController     {@link SmartMotorController} to get the encoder from.
+     * @param inverted            Inverted absolute encoder readings.
      * @return {@link Supplier} of {@link Angle}
      */
     public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(String externalEncoderType,
-                                                            SmartMotorController motorController)
+                                                            SmartMotorController motorController, boolean inverted)
     {
       try
       {
         Class<?> wrapper = Class.forName(className);
-        return (Pair<Supplier<Angle>, Object>) wrapper.getMethod("getAbsoluteEncoder", String.class, Object.class)
+        return (Pair<Supplier<Angle>, Object>) wrapper.getMethod("getAttachedAbsoluteEncoder",
+                                                                 String.class,
+                                                                 Object.class,
+                                                                 boolean.class)
                                                       .invoke(null,
                                                               externalEncoderType,
-                                                              motorController.getMotorController());
+                                                              motorController.getMotorController(),
+                                                              inverted);
       } catch (Exception e)
       {
         throw new RuntimeException(e);
@@ -194,19 +199,20 @@ public class ReflectionsManager
     /**
      * Get the {@link Angle} as a {@link Supplier} and the vendor absolute encoder object.
      *
-     * @param canid  CAN ID of the encoder.
-     * @param canbus CAN bus name of the encoder.
+     * @param canid    CAN ID of the encoder.
+     * @param canbus   CAN bus name of the encoder.
+     * @param inverted Inverted absolute encoder readings.
      * @return {@link Supplier} of {@link Angle}
      */
-    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus)
+    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
     {
       try
       {
         Class<?> wrapper = Class.forName(className);
         return (Pair<Supplier<Angle>, Object>) wrapper.getMethod("getAbsoluteEncoder",
                                                                  int.class,
-                                                                 String.class)
-                                                      .invoke(null, canid, canbus);
+                                                                 String.class, boolean.class)
+                                                      .invoke(null, canid, canbus, inverted);
       } catch (Exception e)
       {
         throw new RuntimeException(e);
@@ -266,7 +272,6 @@ public class ReflectionsManager
       }
     }
   }
-
 
 
   /**

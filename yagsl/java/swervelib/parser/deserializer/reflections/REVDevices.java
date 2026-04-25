@@ -2,12 +2,18 @@ package swervelib.parser.deserializer.reflections;
 
 import static edu.wpi.first.units.Units.Rotations;
 
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
 import com.revrobotics.encoder.SplineEncoder;
-import com.revrobotics.spark.SparkAbsoluteEncoder;
+import com.revrobotics.encoder.config.DetachedEncoderConfig;
+import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
@@ -42,7 +48,19 @@ public class REVDevices
     /**
      * {@link com.revrobotics.encoder.SplineEncoder}
      */
-    SPLINEENCODER
+    SPLINEENCODER,
+    /**
+     * Analog input {@link com.revrobotics.spark.FeedbackSensor#kAnalogSensor}
+     */
+    ANALOG,
+    /**
+     * Analog input {@link com.revrobotics.spark.FeedbackSensor#kAnalogSensor}
+     */
+    ANALOG5V,
+    /**
+     * Duty cycle {@link com.revrobotics.spark.FeedbackSensor#kAbsoluteEncoder}
+     */
+    DUTYCYCLE
   }
 
 
@@ -84,35 +102,76 @@ public class REVDevices
    * @return {@link Pair} of {@link Supplier} and {@link Object}
    * @implNote {@link Angle} is in the range of [0, 1) by default.
    */
-  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus)
+  public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
   {
     var encoder = new SplineEncoder(canid);
+    encoder.configure(new DetachedEncoderConfig().inverted(inverted).velocityConversionFactor(1.0 / 60.0),
+                      ResetMode.kNoResetSafeParameters);
     return Pair.of(() -> Rotations.of(encoder.getAngle()), encoder);
   }
 
-  public static Pair<Supplier<Angle>, Object> getAttachedAbsoluteEncoder(String attachType, Object motorController)
+  /**
+   * Get the attached absolute encoder.
+   *
+   * @param attachType      Absolute encoder type. Only DutyCycle and analog inputs are supported.
+   * @param motorController Spark motor controller to get the absolute encoder from.
+   * @param inverted        Inverted absolute encoder readings.
+   * @return {@link Pair} of {@link Supplier} and DutyCycleEncoder {@link Object}
+   */
+  public static Pair<Supplier<Angle>, Object> getAttachedAbsoluteEncoder(String attachType, Object motorController,
+                                                                         boolean inverted)
   {
-    SparkAbsoluteEncoder encoder;
-    if (motorController instanceof SparkMax)
+    // Will throw an error if invalid motor controller type is given.
+    var encoderType = AbsoluteEncoder.valueOf(attachType.toUpperCase());
+    switch (encoderType)
     {
-      encoder = ((SparkMax) motorController).getAbsoluteEncoder();
-
-    } else if (motorController instanceof SparkFlex)
-    {
-      encoder = ((SparkFlex) motorController).getAbsoluteEncoder();
-    } else
-    {
-      throw new IllegalArgumentException(
-          "Invalid motor controller type: " + motorController.getClass().getSimpleName());
+      case SPLINEENCODER:
+        throw new UnsupportedOperationException("Spline encoders are not attached absolute encoders.");
+      case ANALOG:
+      case ANALOG5V:
+        if (motorController instanceof SparkMax || motorController instanceof SparkFlex)
+        {
+          SparkBase spark =
+              (motorController instanceof SparkMax) ? (SparkMax) motorController : (SparkFlex) motorController;
+          double baseVoltage = (encoderType == AbsoluteEncoder.ANALOG) ? 3.3 : 5.0;
+          // Configure Analog Encoders
+          SparkBaseConfig cfg = (motorController instanceof SparkMax) ? new SparkMaxConfig() : new SparkFlexConfig();
+          cfg.closedLoop.feedbackSensor(FeedbackSensor.kAnalogSensor);
+          // Enable CAN frames
+          cfg.signals
+              .analogVelocityAlwaysOn(true)
+              .analogVoltageAlwaysOn(true)
+              .analogPositionAlwaysOn(true)
+              .analogVoltagePeriodMs(20)
+              .analogPositionPeriodMs(20)
+              .analogVelocityPeriodMs(20);
+          // Configure analog sensor to report in Rotations
+          cfg.analogSensor.inverted(inverted)
+                          .positionConversionFactor(1.0 / baseVoltage)
+                          .velocityConversionFactor(1.0 / baseVoltage);
+          spark.configure(cfg, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+          var analogSensor = spark.getAnalog();
+          return Pair.of(() -> Rotations.of(analogSensor.getPosition()), analogSensor);
+        }
+      case DUTYCYCLE:
+        if (motorController instanceof SparkMax || motorController instanceof SparkFlex)
+        {
+          SparkBase spark =
+              (motorController instanceof SparkMax) ? (SparkMax) motorController : (SparkFlex) motorController;
+          SparkBaseConfig cfg = (motorController instanceof SparkMax) ? new SparkMaxConfig() : new SparkFlexConfig();
+          // Configure Duty Cycle Encoders CAN Frame
+          cfg.signals
+              .absoluteEncoderPositionAlwaysOn(true)
+              .absoluteEncoderPositionPeriodMs(20);
+          // Configure conversion factors to Rotations and Rotations per second
+          cfg.absoluteEncoder.inverted(inverted)
+                             .positionConversionFactor(1.0)
+                             .velocityConversionFactor(1.0 / 60.0);
+          spark.configure(cfg, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+          var encoder = spark.getAbsoluteEncoder();
+          return Pair.of(() -> Rotations.of(encoder.getPosition()), encoder);
+        }
     }
-    switch (attachType)
-    {
-      case "srxmag":
-      case "canandmag":
-      case "revthrouhgbore":
-        return Pair.of(() -> Rotations.of(encoder.getPosition()), encoder);
-      default:
-        throw new IllegalArgumentException("Invalid encoder type: " + attachType);
-    }
+    throw new UnsupportedOperationException("Invalid encoder type: " + encoderType);
   }
 }

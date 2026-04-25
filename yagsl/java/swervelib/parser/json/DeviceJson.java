@@ -270,29 +270,47 @@ public class DeviceJson
    * @return Pair of {@link Supplier} and Vendor Absolute Encoder {@link Object}
    */
   public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(MotorControllers angleMotorVendor,
-                                                          SmartMotorController angleMotorController)
+                                                          SmartMotorController angleMotorController, boolean inverted)
   {
     String[] vendorData           = type.split("_");
     String   vendorType           = vendorData[0];
     String   vendorConnectionType = vendorData[1];
     switch (vendorConnectionType)
     {
+      case "analog":
+      {
+        var analogEncoder = new AnalogEncoder(id);
+        analogEncoder.setInverted(inverted);
+        return Pair.of(() -> Rotations.of(analogEncoder.get()), analogEncoder);
+      }
+      case "dio":
+      {
+        var dutyCycleEncoder = new DutyCycleEncoder(id);
+        dutyCycleEncoder.setInverted(inverted);
+        return Pair.of(() -> Rotations.of(dutyCycleEncoder.get()), dutyCycleEncoder);
+      }
       case "attached":
         switch (vendorType)
         {
-          case "canandmag": return angleMotorVendor.getAbsoluteEncoder("canandmag", angleMotorController);
-          case "revthroughbore": return angleMotorVendor.getAbsoluteEncoder("revthroughbore", angleMotorController);
-          case "srxmag": return angleMotorVendor.getAbsoluteEncoder("srxmag", angleMotorController);
-
+          case "canandmag":
+          case "revthroughbore":
+          case "srxmag":
+          case "dutycycle":
+            return angleMotorVendor.getAbsoluteEncoder("dutycycle", angleMotorController, inverted);
+          case "analog":
+            return angleMotorVendor.getAbsoluteEncoder("analog", angleMotorController, inverted);
+          case "analog5v":
+            return angleMotorVendor.getAbsoluteEncoder("analog5v", angleMotorController, inverted);
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
-      default:
+      case "can":
         switch (vendorType)
         {
-          case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus);
+          case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus, inverted);
 
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
+      default: throw new IllegalArgumentException("Invalid encoder connection type: " + vendorConnectionType);
     }
   }
 

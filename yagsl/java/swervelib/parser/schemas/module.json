@@ -157,7 +157,10 @@
             "andymarkhexbore_attached",
             "andymarkhexbore_dio",
             "andymarkhexbore_analog",
-            "andymarkhexbore_can"
+            "andymarkhexbore_can",
+            "analog5v_attached",
+            "analog_attached",
+            "dutycycle_attached"
           ],
           "type": "string",
           "description": "Type of absolute encoder"
