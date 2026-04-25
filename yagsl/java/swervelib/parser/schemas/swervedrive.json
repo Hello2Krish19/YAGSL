@@ -8,13 +8,10 @@
       "properties": {
         "type": {
           "enum": [
-            "navx_mxp",
-            "navx2_usb1",
-            "navx2_usb2",
             "navx3_can",
-            "pigeon2",
-            "canandgyro",
-            "systemcore"
+            "pigeon2_can",
+            "canandgyro_can",
+            "systemcore_internal"
           ],
           "type": "string",
           "description": "The gyroscope type"

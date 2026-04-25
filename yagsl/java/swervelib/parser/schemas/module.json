@@ -148,6 +148,7 @@
           "enum": [
             "revthroughbore_attached",
             "revthroughbore_dio",
+            "splineencoder_can",
             "cancoder_can",
             "canandmag_attached",
             "canandmag_dio",

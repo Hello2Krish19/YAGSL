@@ -1,6 +1,5 @@
 package swervelib.parser.json;
 
-import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 
 import edu.wpi.first.math.Pair;
@@ -10,6 +9,7 @@ import edu.wpi.first.wpilibj.AnalogEncoder;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import java.util.function.Supplier;
 import swervelib.parser.deserializer.ReflectionsManager.AbsoluteEncoder;
+import swervelib.parser.deserializer.ReflectionsManager.Gyro;
 import swervelib.parser.deserializer.ReflectionsManager.MotorControllers;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
@@ -68,81 +68,34 @@ public class DeviceJson
     }
   }
 
-  public Supplier<Angle> getEncoderSupplier(Object azimuthVendorMotorController)
+  /**
+   * Get the gyro angle supplier.
+   *
+   * @param axis     Gyro axis.
+   * @param inverted Invert the gyro angle.
+   * @return {@link Supplier} of {@link Angle}
+   */
+  public Pair<Supplier<Angle>, Object> getGyroSupplier(GyroAxis axis, boolean inverted)
   {
-    switch (getVendor(VENDOR.UNKNOWN))
+    if (type.contains("_"))
     {
-      case CTRE ->
+      String[] vendorData           = type.split("_");
+      String   vendorType           = vendorData[0];
+      String   vendorConnectionType = vendorData[1];
+      switch (vendorConnectionType)
       {
-        return getCTREEncoder().getAbsolutePosition().asSupplier();
-      }
-      case REV ->
-      {
-        return () -> Rotations.of(getREVEncoder(azimuthVendorMotorController).getPosition());
-      }
-      case ANDYMARK ->
-      {
-        throw new UnsupportedOperationException("AndyMark hex bore encoder are not yet supported.");
-      }
-      case REDUX ->
-      {
-//        return getReduxEncoder()
-        throw new UnsupportedOperationException("Redux encoder are not yet supported.");
-      }
-      case SMARTIO ->
-      {
-        Object encoder = getSmartIOEncoder();
-        if (encoder instanceof DutyCycleEncoder)
-        {return () -> Rotations.of(((DutyCycleEncoder) encoder).get());}
-        if (encoder instanceof AnalogEncoder)
-        {return () -> Rotations.of(((AnalogEncoder) encoder).get());}
-      }
-    }
-    throw new IllegalArgumentException("Invalid encoder type: " + type);
-  }
-
-  public Supplier<Angle> getGyroSupplier(GyroAxis axis)
-  {
-    switch (getVendor(VENDOR.UNKNOWN))
-    {
-      case CTRE ->
-      {
-        switch (axis)
-        {
-          case YAW -> getCTREGyro().getYaw().asSupplier();
-          case PITCH -> getCTREGyro().getPitch().asSupplier();
-          case ROLL -> getCTREGyro().getRoll().asSupplier();
-        }
-      }
-//      case REDUX -> {
-//        switch (axis){
-//
-//        }
-//      }
-      case STUDICA ->
-      {
-        if (getStudicaGyro() instanceof Navx)
-        {
-          switch (axis)
+        case "can":
+          switch (vendorType)
           {
-            case YAW ->
-            {
-              return () -> Degrees.of(((Navx) getStudicaGyro()).getYaw());
-            }
-            case PITCH ->
-            {
-              return () -> Degrees.of(((Navx) getStudicaGyro()).getPitch());
-            }
-            case ROLL ->
-            {
-              return () -> Degrees.of(((Navx) getStudicaGyro()).getRoll());
-            }
+            case "navx3":
+              return Gyro.NAVX3.getAbsoluteEncoder(id, canbus, axis, inverted);
+            case "pigeon2":
+              return Gyro.PIGEON2.getAbsoluteEncoder(id, canbus, axis, inverted);
+            case "canandgyro":
+              return Gyro.CANANDGYRO.getAbsoluteEncoder(id, canbus, axis, inverted);
           }
-        }
-      }
-      case LIMELIGHT ->
-      {
-        throw new UnsupportedOperationException("Limelight gyro are not yet supported.");
+        case "internal":
+          throw new IllegalArgumentException("Internal gyro not supported yet!");
       }
     }
     throw new IllegalArgumentException("Invalid gyro type: " + type);
@@ -150,119 +103,6 @@ public class DeviceJson
 
   public enum VENDOR
   {CTRE, REV, THRIFTYBOT, ANDYMARK, REDUX, STUDICA, SMARTIO, LIMELIGHT, UNKNOWN}
-
-  /**
-   * Get the vendor of the device.
-   *
-   * @return Vendor of the device.
-   */
-  public VENDOR getVendor(VENDOR attachedType)
-  {
-    if (type.contains("_"))
-    {
-      String[] vendorData           = type.split("_");
-      String   vendorType           = vendorData[0];
-      String   vendorConnectionType = vendorData[1];
-      switch (vendorType)
-      {
-        case "systemcore":
-          return VENDOR.LIMELIGHT;
-        case "navx":
-        case "navx2":
-        case "navx3":
-          return VENDOR.STUDICA;
-        case "talonfx":
-        case "talonfxs":
-        case "cancoder":
-        case "pigeon2":
-          return VENDOR.CTRE;
-        case "sparkmax":
-        case "sparkflex":
-          return VENDOR.REV;
-        case "revthroughbore":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio": return VENDOR.SMARTIO;
-          }
-        case "nova":
-          return VENDOR.THRIFTYBOT;
-        case "andymarkhexbore":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio":
-            case "analog": return VENDOR.SMARTIO;
-            case "can": return VENDOR.ANDYMARK;
-          }
-        case "canandgyro": return VENDOR.REDUX;
-        case "canandmag":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "dio": return VENDOR.SMARTIO;
-            case "can": return VENDOR.REDUX;
-          }
-        case "srxmag":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "analog": return VENDOR.SMARTIO;
-          }
-        case "thrifty":
-          switch (vendorConnectionType)
-          {
-            case "attached": return attachedType;
-            case "analog": return VENDOR.SMARTIO;
-          }
-      }
-    }
-    return VENDOR.UNKNOWN;
-  }
-
-  public Object getStudicaGyro()
-  {
-    String[] vendorData           = type.split("_");
-    String   vendorType           = vendorData[0];
-    String   vendorConnectionType = vendorData[1];
-    switch (vendorConnectionType)
-    {
-      case "can":
-        return new Navx(id);
-      default:
-        throw new IllegalArgumentException("Invalid gyro connection type: " + vendorType);
-    }
-
-  }
-
-  public Pigeon2 getCTREGyro()
-  {
-    return new Pigeon2(id);
-  }
-
-//  public Canandgyro getReduxGyro()
-//  {
-//    String[] vendorData           = type.split("_");
-//    String   vendorType           = vendorData[0];
-//    String   vendorConnectionType = vendorData[1];
-//    switch (vendorType)
-//    {
-//      case "canandgyro": return new Canandgyro(id);
-//      default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
-//    }
-//  }
-
-//  public Canandmag getReduxEncoder()
-//  {
-//    String[] vendorData           = type.split("_");
-//    String   vendorType           = vendorData[0];
-//    String   vendorConnectionType = vendorData[1];
-//    switch (vendorType)
-//    {
-//      case "canandmag": return new Canandmag(id);
-//      default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
-//    }
-//  }
 
   /**
    * Get the Absolute Encoder Supplier and Vendor Absolute Encoder Object.
@@ -292,6 +132,7 @@ public class DeviceJson
       case "attached":
         switch (vendorType)
         {
+          case "andymarkhexbore":
           case "canandmag":
           case "revthroughbore":
           case "srxmag":
@@ -307,52 +148,13 @@ public class DeviceJson
         switch (vendorType)
         {
           case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus, inverted);
-
+          case "canandmag": return AbsoluteEncoder.CANANDMAG.getAbsoluteEncoder(id, canbus, inverted);
+          case "andymarkhexbore": return AbsoluteEncoder.ANDYMARK.getAbsoluteEncoder(id, canbus, inverted);
+          case "splineencoder": return AbsoluteEncoder.SPLINE_ENCODER.getAbsoluteEncoder(id, canbus, inverted);
           default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
         }
       default: throw new IllegalArgumentException("Invalid encoder connection type: " + vendorConnectionType);
     }
-  }
-
-  /**
-   * Get the Spark encoder.
-   *
-   * @param vendorMotorController {@link SparkMax} or {@link SparkFlex} vendor motor controller
-   * @return {@link SparkAbsoluteEncoder}
-   */
-  public SparkAbsoluteEncoder getREVEncoder(Object vendorMotorController)
-  {
-    if (vendorMotorController instanceof SparkBase) {return ((SparkBase) vendorMotorController).getAbsoluteEncoder();}
-    throw new IllegalArgumentException(
-        "Invalid vendor motor controller type: " + vendorMotorController.getClass().getSimpleName());
-  }
-
-  /**
-   * SmartIO Encoder.
-   *
-   * @return {@link DutyCycleEncoder}
-   */
-  public Object getSmartIOEncoder()
-  {
-    String[] vendorData           = type.split("_");
-    String   vendorType           = vendorData[0];
-    String   vendorConnectionType = vendorData[1];
-    switch (vendorConnectionType)
-    {
-      case "dio": return new DutyCycleEncoder(id);
-      case "analog": return new AnalogEncoder(channel);
-    }
-    throw new IllegalArgumentException("Invalid encoder connection type: " + vendorConnectionType);
-  }
-
-  /**
-   * AndyMark Hex Bore Encoder.
-   *
-   * @return Object
-   */
-  public Object getAndyMarkEncoder()
-  {
-    throw new UnsupportedOperationException("AndyMark hex bore encoder are not yet supported.");
   }
 
   /**

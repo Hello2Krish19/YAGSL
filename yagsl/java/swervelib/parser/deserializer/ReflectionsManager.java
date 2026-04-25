@@ -5,6 +5,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
 import java.util.function.Supplier;
 import swervelib.parser.deserializer.reflections.CTREDevices.MotorControllerType;
+import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
 
@@ -181,7 +182,11 @@ public class ReflectionsManager
     /**
      * ThriftyBot CAN encoder
      */
-    THRIFTYBOT10PIN("ThriftyBotDevices");
+    THRIFTYBOT10PIN("ThriftyBotDevices"),
+    /**
+     * REV Robotics Spline Encoder, (if you use this for an azimuth encoder... wow...)
+     */
+    SPLINE_ENCODER("REVDevices");
 
     private final String packageName = "swervelib.parser.deserializer.reflections";
     private final String className;
@@ -257,15 +262,17 @@ public class ReflectionsManager
      * @param canbus CAN bus name of the encoder.
      * @return {@link Supplier} of {@link Angle}
      */
-    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus)
+    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, GyroAxis axis, boolean inverted)
     {
       try
       {
         Class<?> wrapper = Class.forName(className);
         return (Pair<Supplier<Angle>, Object>) wrapper.getMethod("getGyroAngle",
                                                                  int.class,
-                                                                 String.class)
-                                                      .invoke(null, canid, canbus);
+                                                                 String.class,
+                                                                 GyroAxis.class,
+                                                                 boolean.class)
+                                                      .invoke(null, canid, canbus, axis, inverted);
       } catch (Exception e)
       {
         throw new RuntimeException(e);
