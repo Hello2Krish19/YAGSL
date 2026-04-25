@@ -133,11 +133,26 @@ public class ReflectionsManager
     }
   }
 
+  /**
+   * Absolute encoder vendor classes.
+   */
   public enum AbsoluteEncoder
   {
+    /**
+     * CANCoder class
+     */
     CANCODER("CTREDevices"),
+    /**
+     * CANandMag encoder
+     */
     CANANDMAG("ReduxDevices"),
+    /**
+     * AM CAN Encoder
+     */
     ANDYMARK("AndyMarkDevices"),
+    /**
+     * ThriftyBot CAN encoder
+     */
     THRIFTYBOT10PIN("ThriftyBotDevices");
 
     private final String packageName = "swervelib.parser.deserializer.reflections";
@@ -176,10 +191,22 @@ public class ReflectionsManager
     }
   }
 
+  /**
+   * Gyro vendor classes.
+   */
   public enum Gyro
   {
+    /**
+     * Pigeon2 Gyro
+     */
     PIGEON2("CTREDevices"),
+    /**
+     * NavX3 Gyro
+     */
     NAVX3("StudicaLibDevices"),
+    /**
+     * CANandGyro
+     */
     CANANDGYRO("ReduxDevices");
     private final String packageName = "swervelib.parser.deserializer.reflections";
     private final String className;

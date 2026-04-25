@@ -3,21 +3,6 @@ package swervelib.parser.json;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 
-import com.ctre.phoenix6.CANBus;
-import com.ctre.phoenix6.hardware.CANcoder;
-import com.ctre.phoenix6.hardware.Pigeon2;
-import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.hardware.TalonFXS;
-import com.revrobotics.spark.SparkAbsoluteEncoder;
-import com.revrobotics.spark.SparkBase;
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
-import com.studica.frc.AHRS;
-import com.studica.frc.AHRS.NavXComType;
-import com.studica.frc.Navx;
-import com.thethriftybot.devices.ThriftyNova;
-import com.thethriftybot.devices.ThriftyNova.ExternalEncoder;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.AnalogEncoder;
@@ -26,10 +11,6 @@ import java.util.function.Supplier;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
-import yams.motorcontrollers.local.NovaWrapper;
-import yams.motorcontrollers.local.SparkWrapper;
-import yams.motorcontrollers.remote.TalonFXSWrapper;
-import yams.motorcontrollers.remote.TalonFXWrapper;
 
 /**
  * Device JSON parsed class. Used to access the JSON data.
@@ -154,23 +135,6 @@ public class DeviceJson
               return () -> Degrees.of(((Navx) getStudicaGyro()).getRoll());
             }
           }
-        } else if (getStudicaGyro() instanceof AHRS)
-        {
-          switch (axis)
-          {
-            case YAW ->
-            {
-              return () -> Degrees.of(((AHRS) getStudicaGyro()).getYaw());
-            }
-            case PITCH ->
-            {
-              return () -> Degrees.of(((AHRS) getStudicaGyro()).getPitch());
-            }
-            case ROLL ->
-            {
-              return () -> Degrees.of(((AHRS) getStudicaGyro()).getRoll());
-            }
-          }
         }
       }
       case LIMELIGHT ->
@@ -262,14 +226,6 @@ public class DeviceJson
     {
       case "can":
         return new Navx(id);
-      case "mxp":
-        return new AHRS(NavXComType.kMXP_SPI);
-      case "usb1":
-        return new AHRS(NavXComType.kUSB1);
-      case "usb2":
-        return new AHRS(NavXComType.kUSB2);
-      case "i2c":
-        return new AHRS(NavXComType.kI2C);
       default:
         throw new IllegalArgumentException("Invalid gyro connection type: " + vendorType);
     }
