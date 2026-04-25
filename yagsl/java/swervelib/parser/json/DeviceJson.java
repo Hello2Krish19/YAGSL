@@ -228,75 +228,30 @@ public class DeviceJson
    * Get the {@link SmartMotorController} from the {@link DeviceJson} when given the
    * {@link SmartMotorControllerConfig}.
    *
-   * @param config                {@link SmartMotorControllerConfig} to apply when creating
-   *                              {@link SmartMotorController}.
-   * @param vendorMotorController Vendor motor controller.
+   * @param config {@link SmartMotorControllerConfig} to apply when creating {@link SmartMotorController}.
    * @return {@link SmartMotorController}
    */
-  public SmartMotorController getMotorController(SmartMotorControllerConfig config, Object vendorMotorController)
+  public SmartMotorController getMotorController(SmartMotorControllerConfig config)
   {
     String[] subtypes            = type.split("_");
     String   motorControllerType = subtypes[0].toLowerCase();
     String   motorType           = subtypes[1].toLowerCase();
     DCMotor  motor               = getDCMotor(motorType);
-    if (vendorMotorController == null)
-    {
-      vendorMotorController = getVendorMotorController();
-    }
-    if (vendorMotorController instanceof TalonFX)
-    {
-      return new TalonFXWrapper((TalonFX) vendorMotorController, motor, config);
-    } else if (vendorMotorController instanceof TalonFXS)
-    {
-      return new TalonFXSWrapper((TalonFXS) vendorMotorController, motor, config);
-    } else if (vendorMotorController instanceof SparkMax)
-    {
-      return new SparkWrapper((SparkMax) vendorMotorController, motor, config);
-    } else if (vendorMotorController instanceof SparkFlex)
-    {
-      return new SparkWrapper((SparkFlex) vendorMotorController, motor, config);
-    } else if (vendorMotorController instanceof ThriftyNova)
-    {
-      return new NovaWrapper((ThriftyNova) vendorMotorController, motor, config);
-    }
-    throw new IllegalArgumentException("Invalid motor controller type: " + motorControllerType);
-  }
-
-  /**
-   * Get the vendor motor controller.
-   *
-   * @return Vendor motor controller.
-   */
-  public Object getVendorMotorController()
-  {
-    String[] subtypes            = type.split("_");
-    String   motorControllerType = subtypes[0].toLowerCase();
-    String   motorType           = subtypes[1].toLowerCase();
     switch (motorControllerType)
     {
       case "talonfx":
-        return new TalonFX(id, new CANBus(canbus));
+        return MotorControllers.TALONFX.getMotorController(id, canbus, config, motor);
       case "talonfxs":
-        return new TalonFXS(id, new CANBus(canbus));
+        return MotorControllers.TALONFXS.getMotorController(id, canbus, config, motor);
       case "sparkmax":
-        return new SparkMax(id, MotorType.kBrushless);
+        return MotorControllers.SPARKMAX.getMotorController(id, canbus, config, motor);
       case "sparkflex":
-        return new SparkFlex(id, MotorType.kBrushless);
+        return MotorControllers.SPARKFLEX.getMotorController(id, canbus, config, motor);
       case "nova":
-        switch (motorType)
-        {
-          case "neo":
-          case "neo2":
-          case "neo550":
-          case "vortex":
-            return new ThriftyNova(id, ThriftyNova.MotorType.NEO);
-          case "minion":
-            return new ThriftyNova(id, ThriftyNova.MotorType.MINION);
-        }
+        return MotorControllers.NOVA.getMotorController(id, canbus, config, motor);
       default:
         throw new IllegalArgumentException("Invalid motor controller type: " + motorControllerType);
     }
   }
-
 
 }
