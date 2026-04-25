@@ -159,6 +159,7 @@ public class SwerveParser
       var azimuthMotorVendor           = moduleJson.angle.getVendor(VENDOR.UNKNOWN);
       var absoluteEncoderVendor        = moduleJson.absoluteEncoder.getVendor(azimuthMotorVendor);
       var azimuthVendorMotorController = moduleJson.angle.getVendorMotorController();
+      // TODO: Add forced non-synchronized external encoder support here for redundancy and safety.
       if (absoluteEncoderVendor == azimuthMotorVendor)
       {
         Object absoluteEncoder = null;

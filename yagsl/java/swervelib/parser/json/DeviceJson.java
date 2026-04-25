@@ -3,11 +3,14 @@ package swervelib.parser.json;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotations;
 
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.AnalogEncoder;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import java.util.function.Supplier;
+import swervelib.parser.deserializer.ReflectionsManager.AbsoluteEncoder;
+import swervelib.parser.deserializer.ReflectionsManager.MotorControllers;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
@@ -262,37 +265,39 @@ public class DeviceJson
 //  }
 
   /**
-   * Get the CTRE encoder. (only {@link CANcoder}s are supported)
+   * Get the Absolute Encoder Supplier and Vendor Absolute Encoder Object.
    *
-   * @return {@link CANcoder}
+   * @return Pair of {@link Supplier} and Vendor Absolute Encoder {@link Object}
    */
-  public CANcoder getCTREEncoder()
+  public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(MotorControllers angleMotorVendor,
+                                                          SmartMotorController angleMotorController)
   {
     String[] vendorData           = type.split("_");
     String   vendorType           = vendorData[0];
     String   vendorConnectionType = vendorData[1];
-    switch (vendorType)
+    switch (vendorConnectionType)
     {
-      case "cancoder": return new CANcoder(id);
-      default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
-    }
-  }
+      case "attached":
+        switch (vendorType)
+        {
+          case "canandmag": return angleMotorVendor.getAbsoluteEncoder("canandmag", angleMotorController);
+          case "revthroughbore": return angleMotorVendor.getAbsoluteEncoder("revthroughbore", angleMotorController);
+          case "srxmag": return angleMotorVendor.getAbsoluteEncoder("srxmag", angleMotorController);
 
-  /**
-   * Get the ThriftyBot encoder type.
-   *
-   * @return ThriftyBot encoder type.
-   */
-  public ExternalEncoder getThriftyEncoder()
-  {
-    String[] vendorData           = type.split("_");
-    String   vendorType           = vendorData[0];
-    String   vendorConnectionType = vendorData[1];
+          default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
+        }
+      default:
+        switch (vendorType)
+        {
+          case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus);
+
+          default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
+        }
+    }
     switch (vendorType)
     {
-      case "canandmag": return ExternalEncoder.REDUX_ENCODER;
-      case "revthroughbore": return ExternalEncoder.REV_ENCODER;
-      case "srxmag": return ExternalEncoder.SRX_MAG_ENCODER;
+      case "cancoder": return AbsoluteEncoder.CANCODER.getAbsoluteEncoder(id, canbus);
+
       default: throw new IllegalArgumentException("Invalid encoder type: " + vendorType);
     }
   }

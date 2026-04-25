@@ -131,6 +131,29 @@ public class ReflectionsManager
         throw new RuntimeException(e);
       }
     }
+
+    /**
+     * Get the {@link Angle} as a {@link Supplier} and the vendor absolute encoder object.
+     *
+     * @param externalEncoderType External encoder type attached to the motor controller.
+     * @param motorController     {@link SmartMotorController} to get the encoder from.
+     * @return {@link Supplier} of {@link Angle}
+     */
+    public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(String externalEncoderType,
+                                                            SmartMotorController motorController)
+    {
+      try
+      {
+        Class<?> wrapper = Class.forName(className);
+        return (Pair<Supplier<Angle>, Object>) wrapper.getMethod("getAbsoluteEncoder", String.class, Object.class)
+                                                      .invoke(null,
+                                                              externalEncoderType,
+                                                              motorController.getMotorController());
+      } catch (Exception e)
+      {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   /**
@@ -169,7 +192,7 @@ public class ReflectionsManager
     }
 
     /**
-     * Get the angle.
+     * Get the {@link Angle} as a {@link Supplier} and the vendor absolute encoder object.
      *
      * @param canid  CAN ID of the encoder.
      * @param canbus CAN bus name of the encoder.
