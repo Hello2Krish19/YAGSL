@@ -3,19 +3,18 @@ package swervelib.parser;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Millisecond;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj2.command.Subsystem;
+import edu.wpi.first.units.measure.LinearVelocity;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.function.Supplier;
 import swervelib.parser.json.DeviceJson.VENDOR;
 import swervelib.parser.json.ModuleJson;
 import swervelib.parser.json.PIDFPropertiesJson;
@@ -125,19 +124,26 @@ public class SwerveParser
     assert new File(directory, "modules/physicalproperties.json").exists();
   }
 
-  public SwerveDrive createSwerveDrive(Subsystem subsys, Pose2d initialPose, SwerveDriveConfig swerveDriveConfig)
+  public SwerveDrive createSwerveDrive(SwerveDriveConfig swerveDriveConfig)
   {
-    SwerveModule[] modules = new SwerveModule[swerveDriveJson.modules.length];
+    SwerveModule[] modules           = new SwerveModule[swerveDriveJson.modules.length];
+    LinearVelocity avgMaxModuleSpeed = MetersPerSecond.zero();
     for (var i = 0; i < modules.length; i++)
     {
-      var moduleJson = moduleJsons[i];
-      var driveGearing = moduleJson.gearing.drive.equals(physicalPropertiesJson.gearing.drive)
-                         ? physicalPropertiesJson.gearing.drive
-                         : moduleJson.gearing.drive;
-      var azimuthGearing = moduleJson.gearing.angle.equals(physicalPropertiesJson.gearing.drive)
-                           ? physicalPropertiesJson.gearing.angle
-                           : moduleJson.gearing.angle;
-      SmartMotorControllerConfig driveMotorConfig = new SmartMotorControllerConfig(subsys)
+      var moduleJson     = moduleJsons[i];
+      var driveGearing   = physicalPropertiesJson.gearing.drive;
+      var azimuthGearing = physicalPropertiesJson.gearing.angle;
+      // Override module gearings
+      if (moduleJson.gearing.angle.gearRatio != 0)
+      {
+        azimuthGearing = moduleJson.gearing.angle;
+      }
+      if (moduleJson.gearing.drive.gearRatio != 0)
+      {
+        driveGearing = moduleJson.gearing.drive;
+      }
+
+      SmartMotorControllerConfig driveMotorConfig = new SmartMotorControllerConfig(swerveDriveConfig.getSubsystem())
           .withMotorInverted(moduleJson.inverted.drive)
           .withControlMode(ControlMode.CLOSED_LOOP)
           .withWheelDiameter(Inches.of(driveGearing.diameter))
@@ -147,39 +153,32 @@ public class SwerveParser
           .withStatorCurrentLimit(Amps.of(physicalPropertiesJson.statorCurrentLimit.drive))
           .withTelemetry("drive_" + swerveDriveJson.modules[i], TelemetryVerbosity.LOW);
 
-      SmartMotorControllerConfig azimuthMotorConfig = new SmartMotorControllerConfig(subsys)
+      SmartMotorControllerConfig azimuthMotorConfig = new SmartMotorControllerConfig(swerveDriveConfig.getSubsystem())
           .withMotorInverted(moduleJson.inverted.angle)
           .withControlMode(ControlMode.CLOSED_LOOP)
-          .withContinuousWrapping(Rotations.of(-0.5), Rotations.of(0.5))
           .withGearing(azimuthGearing.gearRatio)
           .withClosedLoopController(pidfPropertiesJson.angle.p, pidfPropertiesJson.angle.i, pidfPropertiesJson.angle.d)
+          .withContinuousWrapping(Rotations.of(-0.5), Rotations.of(0.5))
           .withIdleMode(MotorMode.BRAKE)
           .withStatorCurrentLimit(Amps.of(physicalPropertiesJson.statorCurrentLimit.angle))
           .withTelemetry("azimuth_" + swerveDriveJson.modules[i], TelemetryVerbosity.LOW);
+
       var azimuthMotorVendor           = moduleJson.angle.getVendor(VENDOR.UNKNOWN);
       var absoluteEncoderVendor        = moduleJson.absoluteEncoder.getVendor(azimuthMotorVendor);
-      var azimuthVendorMotorController = moduleJson.angle.getVendorMotorController();
+      var azimuthVendorMotorController = moduleJson.angle.getSmartMotorController(azimuthMotorConfig);
+      var absoluteEncoder = moduleJson.absoluteEncoder.getAbsoluteEncoder(moduleJson.angle.getMotorController(),
+                                                                          azimuthVendorMotorController,
+                                                                          moduleJson.absoluteEncoderInverted);
       // TODO: Add forced non-synchronized external encoder support here for redundancy and safety.
-      if (absoluteEncoderVendor == azimuthMotorVendor)
+      if (absoluteEncoderVendor == azimuthMotorVendor && swerveDriveConfig.useExternalFeedbackSensor())
       {
-        Object absoluteEncoder = null;
-        switch (absoluteEncoderVendor)
-        {
-          case CTRE -> {absoluteEncoder = moduleJson.absoluteEncoder.getCTREEncoder();}
-          case REV -> {absoluteEncoder = moduleJson.absoluteEncoder.getREVEncoder(azimuthVendorMotorController);}
-          case THRIFTYBOT -> {absoluteEncoder = moduleJson.absoluteEncoder.getThriftyEncoder();}
-          case ANDYMARK -> {absoluteEncoder = moduleJson.absoluteEncoder.getAndyMarkEncoder();}
-//          case REDUX -> {absoluteEncoder = moduleJson.encoder.getReduxEncoder();}
-          case SMARTIO -> {absoluteEncoder = moduleJson.absoluteEncoder.getSmartIOEncoder();}
-        }
-        if (absoluteEncoder != null)
-        {
-          azimuthMotorConfig.withExternalEncoder(absoluteEncoder).withUseExternalFeedbackEncoder(true);
-        }
+        azimuthMotorConfig.withExternalEncoder(absoluteEncoder.getSecond()).withUseExternalFeedbackEncoder(true);
       }
-      var azimuthMotorController = moduleJson.angle.getMotorController(azimuthMotorConfig,
-                                                                       azimuthVendorMotorController);
-      var driveMotorController = moduleJson.drive.getMotorController(driveMotorConfig, null);
+      var azimuthMotorController = moduleJson.angle.getSmartMotorController(azimuthMotorConfig);
+      var driveMotorController   = moduleJson.drive.getSmartMotorController(driveMotorConfig);
+      avgMaxModuleSpeed = avgMaxModuleSpeed.plus(driveMotorConfig.convertFromMechanism(RadiansPerSecond.of(
+          driveMotorController.getDCMotor().freeSpeedRadPerSec)));
+
       SwerveModuleConfig moduleConfig = new SwerveModuleConfig(driveMotorController, azimuthMotorController)
           .withOptimization(true)
           .withAbsoluteEncoderOffset(Degrees.of(moduleJson.absoluteEncoderOffset))
@@ -188,21 +187,20 @@ public class SwerveParser
           .withTelemetry(swerveDriveJson.modules[i], TelemetryVerbosity.HIGH);
       if (absoluteEncoderVendor != azimuthMotorVendor)
       {
-        Supplier<Angle> absoluteEncoderSupplier = moduleJson.absoluteEncoder.getEncoderSupplier(azimuthVendorMotorController);
-        moduleConfig.withAbsoluteEncoder(absoluteEncoderSupplier);
+        moduleConfig.withAbsoluteEncoder(absoluteEncoder.getFirst());
       }
       SwerveModule module = new SwerveModule(moduleConfig);
       modules[i] = module;
     }
-    SwerveDriveConfig sdc = swerveDriveConfig
-        .withStartingPose(initialPose)
-        .withTelemetry(TelemetryVerbosity.HIGH)
-//        .withSubsystem(subsys)
-//        .withModules(modules)
+
+    swerveDriveConfig
+        .withModules(modules)
+        .withMaximumModuleSpeed(avgMaxModuleSpeed.div(modules.length))
         .withDiscretizationTime(Millisecond.of(20))
-        .withSimDiscretizationTime(Millisecond.of(10))
-        .withGyro(swerveDriveJson.gyro.getGyroSupplier(GyroAxis.valueOf(swerveDriveJson.gyroAxis.toUpperCase())))
+        .withSimDiscretizationTime(Millisecond.of(20))
+        .withGyro(swerveDriveJson.gyro.getGyro(GyroAxis.valueOf(swerveDriveJson.gyroAxis.toUpperCase()),
+                                               swerveDriveJson.gyroInvert).getFirst())
         .withGyroInverted(swerveDriveJson.gyroInvert);
-    return new SwerveDrive(sdc);
+    return new SwerveDrive(swerveDriveConfig);
   }
 }

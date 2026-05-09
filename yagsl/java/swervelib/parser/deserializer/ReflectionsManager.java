@@ -3,6 +3,7 @@ package swervelib.parser.deserializer;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
+import java.lang.reflect.InvocationTargetException;
 import java.util.function.Supplier;
 import swervelib.parser.deserializer.reflections.CTREDevices.MotorControllerType;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
@@ -77,7 +78,7 @@ public class ReflectionsManager
   /**
    * {@link SmartMotorController} vendor classes.
    */
-  public enum MotorControllers
+  public enum VendorMotorController
   {
     /**
      * TalonFX Motor Controller wihtin KrakenX60 and KrakenX44
@@ -98,7 +99,11 @@ public class ReflectionsManager
     /**
      * ThriftyBot Nova Motor Controller
      */
-    NOVA("ThriftyBotDevices");
+    NOVA("ThriftyBotDevices"),
+    /**
+     * not a motor controller
+     */
+    NONE("");
 
     /**
      * Reflection package name
@@ -114,7 +119,7 @@ public class ReflectionsManager
      *
      * @param className Class vendor object
      */
-    MotorControllers(String className)
+    VendorMotorController(String className)
     {
       this.className = packageName + "." + className;
     }
@@ -141,8 +146,13 @@ public class ReflectionsManager
                                                         DCMotor.class,
                                                         String.class)
                                              .invoke(null, canid, canbus, config, motor, this.name());
+      } catch (InvocationTargetException e)
+      {
+        System.err.println("Error getting motor controller: " + className + ".getMotorController");
+        throw new RuntimeException(e.getTargetException());
       } catch (Exception e)
       {
+        System.err.println("Error getting motor controller: " + className + ".getMotorController");
         throw new RuntimeException(e);
       }
     }

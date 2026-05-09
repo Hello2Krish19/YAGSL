@@ -17,6 +17,8 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Angle;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
@@ -63,6 +65,14 @@ public class REVDevices
     DUTYCYCLE
   }
 
+  /**
+   * Map of CAN ID to motor controller.
+   */
+  private static Map<Integer, SmartMotorController>          motorControllers = new HashMap<Integer, SmartMotorController>();
+  /**
+   * Encoder object hash map.
+   */
+  private static Map<Integer, Pair<Supplier<Angle>, Object>> encoders         = new HashMap<Integer, Pair<Supplier<Angle>, Object>>();
 
   /**
    * Get the {@link com.revrobotics.spark.SparkBase} as a {@link SmartMotorController}.
@@ -77,6 +87,10 @@ public class REVDevices
   public static SmartMotorController getMotorController(int canid, String canbus, SmartMotorControllerConfig config,
                                                         DCMotor motor, String motorControllerType)
   {
+    if (motorControllers.containsKey(canid))
+    {
+      return motorControllers.get(canid);
+    }
     // Will throw an error if invalid motor controller type is given.
     var       motorType       = MotorControllerType.valueOf(motorControllerType.toUpperCase());
     SparkBase motorController = null;
@@ -91,7 +105,9 @@ public class REVDevices
         motorController = new SparkMax(canid, MotorType.kBrushless);
       }
     }
-    return new SparkWrapper(motorController, motor, config);
+    var smc = new SparkWrapper(motorController, motor, config);
+    motorControllers.put(canid, smc);
+    return smc;
   }
 
   /**
@@ -104,10 +120,15 @@ public class REVDevices
    */
   public static Pair<Supplier<Angle>, Object> getAbsoluteEncoder(int canid, String canbus, boolean inverted)
   {
+    if (encoders.containsKey(canid))
+    {
+      return encoders.get(canid);
+    }
     var encoder = new SplineEncoder(canid);
     encoder.configure(new DetachedEncoderConfig().inverted(inverted).velocityConversionFactor(1.0 / 60.0),
                       ResetMode.kNoResetSafeParameters);
-    return Pair.of(() -> Rotations.of(encoder.getAngle()), encoder);
+    encoders.put(canid, Pair.of(() -> Rotations.of(encoder.getAngle()), encoder));
+    return encoders.get(canid);
   }
 
   /**

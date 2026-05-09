@@ -10,7 +10,7 @@ import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import java.util.function.Supplier;
 import swervelib.parser.deserializer.ReflectionsManager.AbsoluteEncoder;
 import swervelib.parser.deserializer.ReflectionsManager.Gyro;
-import swervelib.parser.deserializer.ReflectionsManager.MotorControllers;
+import swervelib.parser.deserializer.ReflectionsManager.VendorMotorController;
 import swervelib.parser.json.SwerveDriveJson.GyroAxis;
 import yams.motorcontrollers.SmartMotorController;
 import yams.motorcontrollers.SmartMotorControllerConfig;
@@ -75,7 +75,7 @@ public class DeviceJson
    * @param inverted Invert the gyro angle.
    * @return {@link Supplier} of {@link Angle}
    */
-  public Pair<Supplier<Angle>, Object> getGyroSupplier(GyroAxis axis, boolean inverted)
+  public Pair<Supplier<Angle>, Object> getGyro(GyroAxis axis, boolean inverted)
   {
     if (type.contains("_"))
     {
@@ -172,11 +172,40 @@ public class DeviceJson
   }
 
   /**
+   * Get the {@link VendorMotorController} object for the device.
+   *
+   * @return {@link VendorMotorController} object for the device.
+   */
+  public VendorMotorController getMotorController()
+  {
+    if (type.contains("_"))
+    {
+      String[] vendorData           = type.split("_");
+      String   vendorType           = vendorData[0];
+      String   vendorConnectionType = vendorData[1];
+      switch (vendorType)
+      {
+        case "nova":
+          return VendorMotorController.NOVA;
+        case "sparkmax":
+          return VendorMotorController.SPARKMAX;
+        case "sparkflex":
+          return VendorMotorController.SPARKFLEX;
+        case "talonfx":
+          return VendorMotorController.TALONFX;
+        case "talonfxs":
+          return VendorMotorController.TALONFXS;
+      }
+    }
+    return VendorMotorController.NONE;
+  }
+
+  /**
    * Get the Absolute Encoder Supplier and Vendor Absolute Encoder Object.
    *
    * @return Pair of {@link Supplier} and Vendor Absolute Encoder {@link Object}
    */
-  public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(MotorControllers angleMotorVendor,
+  public Pair<Supplier<Angle>, Object> getAbsoluteEncoder(VendorMotorController angleMotorVendor,
                                                           SmartMotorController angleMotorController, boolean inverted)
   {
     String[] vendorData           = type.split("_");
@@ -231,7 +260,7 @@ public class DeviceJson
    * @param config {@link SmartMotorControllerConfig} to apply when creating {@link SmartMotorController}.
    * @return {@link SmartMotorController}
    */
-  public SmartMotorController getMotorController(SmartMotorControllerConfig config)
+  public SmartMotorController getSmartMotorController(SmartMotorControllerConfig config)
   {
     String[] subtypes            = type.split("_");
     String   motorControllerType = subtypes[0].toLowerCase();
@@ -240,15 +269,15 @@ public class DeviceJson
     switch (motorControllerType)
     {
       case "talonfx":
-        return MotorControllers.TALONFX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.TALONFX.getMotorController(id, canbus, config, motor);
       case "talonfxs":
-        return MotorControllers.TALONFXS.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.TALONFXS.getMotorController(id, canbus, config, motor);
       case "sparkmax":
-        return MotorControllers.SPARKMAX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.SPARKMAX.getMotorController(id, canbus, config, motor);
       case "sparkflex":
-        return MotorControllers.SPARKFLEX.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.SPARKFLEX.getMotorController(id, canbus, config, motor);
       case "nova":
-        return MotorControllers.NOVA.getMotorController(id, canbus, config, motor);
+        return VendorMotorController.NOVA.getMotorController(id, canbus, config, motor);
       default:
         throw new IllegalArgumentException("Invalid motor controller type: " + motorControllerType);
     }
